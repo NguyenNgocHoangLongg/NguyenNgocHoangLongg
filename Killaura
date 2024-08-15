@@ -1,21 +1,46 @@
 local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
 local Button = Instance.new("TextButton")
+local HideButton = Instance.new("TextButton")
 
 ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false -- Đảm bảo GUI không bị xóa khi nhân vật chết
 
-Button.Parent = ScreenGui
+Frame.Parent = ScreenGui
+Frame.Size = UDim2.new(0, 300, 0, 200)
+Frame.Position = UDim2.new(0.5, -150, 0.5, -100)
+Frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Frame.Active = true
+Frame.Draggable = true -- Cho phép kéo và thả
+
+Button.Parent = Frame
 Button.Size = UDim2.new(0, 200, 0, 50)
 Button.Position = UDim2.new(0.5, -100, 0.5, -25)
-Button.Text = "Bật/Tắt Script"
+Button.Text = "Bật Script"
+
+HideButton.Parent = Frame
+HideButton.Size = UDim2.new(0, 50, 0, 50)
+HideButton.Position = UDim2.new(1, -55, 0, 5)
+HideButton.Text = "Ẩn"
 
 getgenv().Enabled = true
 
 local function toggleScript()
     getgenv().Enabled = not getgenv().Enabled
+    if getgenv().Enabled then
+        Button.Text = "Tắt Script"
+    else
+        Button.Text = "Bật Script"
+    end
 end
 
 Button.MouseButton1Click:Connect(toggleScript)
+
+local function toggleVisibility()
+    Frame.Visible = not Frame.Visible
+end
+
+HideButton.MouseButton1Click:Connect(toggleVisibility)
 
 spawn(function()
     while true do
