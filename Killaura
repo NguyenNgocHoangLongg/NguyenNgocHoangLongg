@@ -1,12 +1,35 @@
-getgenv().Enabled = true 
+local ScreenGui = Instance.new("ScreenGui")
+local Button = Instance.new("TextButton")
 
-while getgenv().Enabled do
-    wait(0.1)
-    sethiddenproperty(game.Players.LocalPlayer, "SimulationRadius", 112412400000)
-    sethiddenproperty(game.Players.LocalPlayer, "MaxSimulationRadius", 112412400000)
-    for i,d in pairs(game.Workspace:GetDescendants()) do
-        if d.ClassName == 'Humanoid' and d.Parent.Name ~= game.Players.LocalPlayer.Name then
-            d.Health = 0
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false -- Đảm bảo GUI không bị xóa khi nhân vật chết
+
+Button.Parent = ScreenGui
+Button.Size = UDim2.new(0, 200, 0, 50)
+Button.Position = UDim2.new(0.5, -100, 0.5, -25)
+Button.Text = "Bật/Tắt Script"
+
+getgenv().Enabled = true
+
+local function toggleScript()
+    getgenv().Enabled = not getgenv().Enabled
+end
+
+Button.MouseButton1Click:Connect(toggleScript)
+
+spawn(function()
+    while true do
+        if getgenv().Enabled then
+            wait(0.1)
+            sethiddenproperty(game.Players.LocalPlayer, "SimulationRadius", 112412400000)
+            sethiddenproperty(game.Players.LocalPlayer, "MaxSimulationRadius", 112412400000)
+            for i, d in pairs(game.Workspace:GetDescendants()) do
+                if d.ClassName == 'Humanoid' and d.Parent.Name ~= game.Players.LocalPlayer.Name then
+                    d.Health = 0
+                end
+            end
+        else
+            wait(0.1)
         end
     end
-end
+end)
