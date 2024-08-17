@@ -1,6 +1,13 @@
+-- Đảm bảo script chạy trên client
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+-- Tạo GUI
 local gui = Instance.new("ScreenGui")
 gui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
+-- Khung nền
 local background = Instance.new("Frame")
 background.Size = UDim2.new(0, 200, 0, 100)
 background.BackgroundColor3 = Color3.new(0, 0, 1)
@@ -11,27 +18,41 @@ background.Active = true
 background.Draggable = true
 background.Parent = gui
 
+-- Hộp nhập ID bài hát
 local idBox = Instance.new("TextBox")
 idBox.Size = UDim2.new(0.5, 0, 0.2, 0)
 idBox.Position = UDim2.new(0.25, 0, 0.2, 0)
 idBox.Text = "Enter Song ID"
 idBox.Parent = background
 
+-- Nút Play
 local playButton = Instance.new("TextButton")
 playButton.Size = UDim2.new(0.4, 0, 0.2, 0)
 playButton.Position = UDim2.new(0.05, 0, 0.5, 0)
 playButton.Text = "Play"
 playButton.Parent = background
 
+-- Nút Stop
 local stopButton = Instance.new("TextButton")
 stopButton.Size = UDim2.new(0.4, 0, 0.2, 0)
 stopButton.Position = UDim2.new(0.55, 0, 0.5, 0)
 stopButton.Text = "Stop"
 stopButton.Parent = background
 
+-- Tạo âm thanh
 local audio = Instance.new("Sound")
 audio.Parent = game.Workspace
 
-local notification = Instance.new("TextLabel")
-notification.Size = UDim2.new(0, 200, 0, 20)
-notification
+-- Chức năng nút Play
+playButton.MouseButton1Click:Connect(function()
+    local id = tonumber(idBox.Text)
+    if id then
+        audio.SoundId = "rbxassetid://"..id
+        audio:Play()
+    end
+end)
+
+-- Chức năng nút Stop
+stopButton.MouseButton1Click:Connect(function()
+    audio:Stop()
+end)
