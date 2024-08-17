@@ -5,15 +5,16 @@ end
 
 -- Tạo GUI
 local gui = Instance.new("ScreenGui")
+gui.ResetOnSpawn = false -- Đảm bảo GUI không mất khi chết
 gui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
 -- Khung nền
 local background = Instance.new("Frame")
-background.Size = UDim2.new(0, 200, 0, 100)
-background.BackgroundColor3 = Color3.new(0, 0, 1)
+background.Size = UDim2.new(0, 200, 0, 150)
+background.BackgroundColor3 = Color3.new(0, 1, 0) -- Đổi màu nền sang xanh lá
 background.BorderColor3 = Color3.new(1, 1, 1)
 background.BackgroundTransparency = 0.5
-background.Position = UDim2.new(0.5, -100, 0.5, -50)
+background.Position = UDim2.new(0.5, -100, 0.5, -75)
 background.Active = true
 background.Draggable = true
 background.Parent = gui
@@ -21,27 +22,56 @@ background.Parent = gui
 -- Hộp nhập ID bài hát
 local idBox = Instance.new("TextBox")
 idBox.Size = UDim2.new(0.5, 0, 0.2, 0)
-idBox.Position = UDim2.new(0.25, 0, 0.2, 0)
+idBox.Position = UDim2.new(0.25, 0, 0.1, 0)
 idBox.Text = "Enter Song ID"
 idBox.Parent = background
 
 -- Nút Play
 local playButton = Instance.new("TextButton")
 playButton.Size = UDim2.new(0.4, 0, 0.2, 0)
-playButton.Position = UDim2.new(0.05, 0, 0.5, 0)
+playButton.Position = UDim2.new(0.05, 0, 0.35, 0)
 playButton.Text = "Play"
 playButton.Parent = background
 
 -- Nút Stop
 local stopButton = Instance.new("TextButton")
 stopButton.Size = UDim2.new(0.4, 0, 0.2, 0)
-stopButton.Position = UDim2.new(0.55, 0, 0.5, 0)
+stopButton.Position = UDim2.new(0.55, 0, 0.35, 0)
 stopButton.Text = "Stop"
 stopButton.Parent = background
+
+-- Nút hiển thị âm lượng
+local volumeLabel = Instance.new("TextLabel")
+volumeLabel.Size = UDim2.new(0.8, 0, 0.1, 0)
+volumeLabel.Position = UDim2.new(0.1, 0, 0.6, 0)
+volumeLabel.Text = "Volume: 0.5"
+volumeLabel.Parent = background
+
+-- Nút tăng âm lượng
+local volumeUpButton = Instance.new("TextButton")
+volumeUpButton.Size = UDim2.new(0.4, 0, 0.1, 0)
+volumeUpButton.Position = UDim2.new(0.05, 0, 0.75, 0)
+volumeUpButton.Text = "Volume Up"
+volumeUpButton.Parent = background
+
+-- Nút giảm âm lượng
+local volumeDownButton = Instance.new("TextButton")
+volumeDownButton.Size = UDim2.new(0.4, 0, 0.1, 0)
+volumeDownButton.Position = UDim2.new(0.55, 0, 0.75, 0)
+volumeDownButton.Text = "Volume Down"
+volumeDownButton.Parent = background
+
+-- Nút ẩn GUI
+local hideButton = Instance.new("TextButton")
+hideButton.Size = UDim2.new(0.4, 0, 0.1, 0)
+hideButton.Position = UDim2.new(0.3, 0, 0.9, 0)
+hideButton.Text = "Hide GUI"
+hideButton.Parent = background
 
 -- Tạo âm thanh
 local audio = Instance.new("Sound")
 audio.Parent = game.Workspace
+audio.Volume = 0.5
 
 -- Chức năng nút Play
 playButton.MouseButton1Click:Connect(function()
@@ -55,4 +85,26 @@ end)
 -- Chức năng nút Stop
 stopButton.MouseButton1Click:Connect(function()
     audio:Stop()
+end)
+
+-- Chức năng nút tăng âm lượng
+volumeUpButton.MouseButton1Click:Connect(function()
+    if audio.Volume < 1 then
+        audio.Volume = audio.Volume + 0.1
+        volumeLabel.Text = "Volume: " .. string.format("%.1f", audio.Volume)
+    end
+end)
+
+-- Chức năng nút giảm âm lượng
+volumeDownButton.MouseButton1Click:Connect(function()
+    if audio.Volume > 0 then
+        audio.Volume = audio.Volume - 0.1
+        volumeLabel.Text = "Volume: " .. string.format("%.1f", audio.Volume)
+    end
+end)
+
+-- Chức năng nút ẩn GUI
+hideButton.MouseButton1Click:Connect(function()
+    background.Visible = not background.Visible
+    hideButton.Text = background.Visible and "Hide GUI" or "Show GUI"
 end)
