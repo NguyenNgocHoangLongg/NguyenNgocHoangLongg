@@ -1,0 +1,42 @@
+local npcFolder = game:GetService("Workspace").HumanoidFolder.NPCFolder
+local increaseFactor = 4 -- Hệ số tăng kích thước
+
+-- Tạo GUI Button
+local screenGui = Instance.new("ScreenGui", game.Players.LocalPlayer:WaitForChild("PlayerGui"))
+local toggleButton = Instance.new("TextButton", screenGui)
+toggleButton.Size = UDim2.new(0, 200, 0, 50)
+toggleButton.Position = UDim2.new(0.5, -100, 0, 50)
+toggleButton.Text = "Start"
+
+-- Hàm để tăng kích thước
+local function increaseSize()
+    for _, noob in pairs(npcFolder:GetChildren()) do
+        if noob:IsA("Model") and string.find(noob.Name:lower(), "noob") then
+            local upperTorso = noob:FindFirstChild("UpperTorso", true)
+            if upperTorso then
+                upperTorso.Anchored = true -- Neo phần UpperTorso
+                upperTorso.Size = upperTorso.Size * increaseFactor -- Tăng kích thước lên gấp 4 lần
+            end
+        end
+    end
+end
+
+-- Hàm để bật/tắt
+local function toggle()
+    if toggleButton.Text == "Start" then
+        toggleButton.Text = "Stop"
+        increaseSize()
+    else
+        toggleButton.Text = "Start"
+        for _, noob in pairs(npcFolder:GetChildren()) do
+            if noob:IsA("Model") and string.find(noob.Name:lower(), "noob") then
+                local upperTorso = noob:FindFirstChild("UpperTorso", true)
+                if upperTorso then
+                    upperTorso.Anchored = false -- Gỡ neo phần UpperTorso
+                end
+            end
+        end
+    end
+end
+
+toggleButton.MouseButton1Click:Connect(toggle)
