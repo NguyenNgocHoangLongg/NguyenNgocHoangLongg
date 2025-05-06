@@ -1,0 +1,88 @@
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local ToggleGuiButton = Instance.new("TextButton")
+local AppearanceNotification = Instance.new("TextLabel") -- Bảng thông báo xuất hiện
+
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+Frame.Parent = ScreenGui
+Frame.Size = UDim2.new(0, 150, 0, 80) -- Tăng kích thước frame để chứa thông báo
+Frame.Position = UDim2.new(0.05, 0, 0.05, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+Frame.Active = true
+Frame.Draggable = true
+
+-- Thiết lập thuộc tính nút ẩn/hiện GUI (góc trên bên trái)
+ToggleGuiButton.Parent = Frame
+ToggleGuiButton.Size = UDim2.new(0, 30, 0, 30)
+ToggleGuiButton.Position = UDim2.new(0, 0, 0, 0)
+ToggleGuiButton.Text = "-"
+ToggleGuiButton.Font = Enum.Font.SourceSansBold
+ToggleGuiButton.TextSize = 20
+ToggleGuiButton.AnchorPoint = Vector2.new(0, 0)
+
+local guiVisible = true
+
+ToggleGuiButton.MouseButton1Click:Connect(function()
+    guiVisible = not guiVisible
+    for _, obj in ipairs(Frame:GetChildren()) do
+        if obj ~= ToggleGuiButton then
+            obj.Visible = guiVisible
+        end
+    end
+    ToggleGuiButton.Text = guiVisible and "-" or "+"
+    -- Điều chỉnh kích thước Frame khi ẩn/hiện
+    if guiVisible then
+        Frame.Size = UDim2.new(0, 150, 0, 80) -- Kích thước khi hiển thị
+    else
+        Frame.Size = UDim2.new(0, 30, 0, 30) -- Kích thước khi ẩn (chỉ nút)
+    end
+end)
+
+-- Thiết lập thuộc tính của bảng thông báo xuất hiện
+AppearanceNotification.Parent = Frame
+AppearanceNotification.Size = UDim2.new(0, 140, 0, 40)
+AppearanceNotification.Position = UDim2.new(0.5, -70, 0.5, -20) -- Đặt ở giữa frame
+AppearanceNotification.BackgroundColor3 = Color3.fromRGB(255, 255, 0) -- Màu nền vàng
+AppearanceNotification.TextColor3 = Color3.fromRGB(0, 0, 0) -- Màu chữ đen
+AppearanceNotification.Text = "Kuzma has appeared!"
+AppearanceNotification.TextScaled = true
+AppearanceNotification.Visible = false -- Ban đầu ẩn đi
+
+local kuzmaTag = nil -- Biến để lưu trữ BillboardGui trên NPC Kuzma
+
+spawn(function()
+    while true do
+        wait(0.1)
+
+        -- Kiểm tra NPC Kuzma
+        local kuzmaNPC = workspace.Map.NPCs:FindFirstChild("Kuzma")
+        if kuzmaNPC and not kuzmaTag then -- Nếu tìm thấy Kuzma và chưa có tag
+            -- Tạo BillboardGui trên đầu NPC
+            local billboardGui = Instance.new("BillboardGui")
+            billboardGui.Size = UDim2.new(0, 100, 0, 20)
+            billboardGui.AlwaysOnTop = true
+            billboardGui.Parent = kuzmaNPC
+
+            local textLabel = Instance.new("TextLabel")
+            textLabel.Size = UDim2.new(1, 0, 1, 0)
+            textLabel.BackgroundTransparency = 1
+            textLabel.Text = "Kuzma"
+            textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+            textLabel.TextScaled = true
+            textLabel.Parent = billboardGui
+
+            kuzmaTag = billboardGui -- Lưu trữ BillboardGui
+            AppearanceNotification.Visible = guiVisible and true -- Hiển thị thông báo nếu GUI đang hiển thị
+        elseif not kuzmaNPC and kuzmaTag then -- Nếu không tìm thấy Kuzma và có tag
+            kuzmaTag:Destroy() -- Xóa BillboardGui
+            kuzmaTag = nil -- Reset biến kuzmaTag
+            AppearanceNotification.Visible = false -- Ẩn thông báo
+        elseif kuzmaNPC and kuzmaTag then
+            AppearanceNotification.Visible = guiVisible and true -- Đảm bảo thông báo vẫn hiển thị nếu GUI đang hiển thị và Kuzma tồn tại
+        else
+            AppearanceNotification.Visible = false
+        end
+    end
+end)
