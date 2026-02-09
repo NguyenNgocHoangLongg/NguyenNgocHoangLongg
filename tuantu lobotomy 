@@ -1,0 +1,207 @@
+-- TỰ ĐỘNG XÓA BẢN CŨ TRƯỚC KHI CHẠY
+local pGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+local old = pGui:FindFirstChild("FacilityMaster_GUI")
+if old then old:Destroy() end
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Biến lưu trữ giá trị sát thương
+local currentDamage = 50
+
+-- ==========================================
+-- 1. LOGIC SÁT THƯƠNG (VẪN DUY TRÌ 1s ĐỂ ĐỠ LAG)
+-- ==========================================
+local function applyDamageToTool(tool)
+    if tool:IsA("Tool") then
+        local settings = tool:FindFirstChild("SettingValues")
+        if settings then
+            local maxVal = settings:FindFirstChild("MaxDamageValue")
+            local minVal = settings:FindFirstChild("MinDamageValue")
+            pcall(function()
+                if maxVal then maxVal.Value = currentDamage end
+                if minVal then minVal.Value = currentDamage end
+            end)
+        end
+    end
+end
+
+task.spawn(function()
+    while true do
+        if LocalPlayer.Character then
+            for _, t in ipairs(LocalPlayer.Character:GetChildren()) do applyDamageToTool(t) end
+        end
+        for _, t in ipairs(LocalPlayer.Backpack:GetChildren()) do applyDamageToTool(t) end
+        task.wait(1)
+    end
+end)
+
+-- ==========================================
+-- 2. HỆ THỐNG ESP (CẬP NHẬT 0.5s)
+-- ==========================================
+local function createESP(instance)
+    if not instance:FindFirstChild("ESP_Highlight") then
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "ESP_Highlight"
+        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        highlight.FillTransparency = 0.5
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.Parent = instance
+
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "ESP_Tag"
+        billboard.Size = UDim2.new(0, 100, 0, 50)
+        billboard.Adornee = instance.PrimaryPart or instance:FindFirstChildWhichIsA("BasePart")
+        billboard.AlwaysOnTop = true
+        billboard.ExtentsOffset = Vector3.new(0, 3, 0)
+        billboard.Parent = instance
+
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Text = instance.Name
+        label.TextColor3 = Color3.new(1, 1, 1)
+        label.TextStrokeTransparency = 0
+        label.Font = Enum.Font.SourceSansBold
+        label.TextSize = 14
+        label.Parent = billboard
+    end
+end
+
+task.spawn(function()
+    while true do
+        local units = workspace:FindFirstChild("Units")
+        if units then
+            for _, obj in ipairs(units:GetChildren()) do
+                if obj:IsA("Model") and obj.Name ~= "Clerk" and not Players:GetPlayerFromCharacter(obj) then
+                    createESP(obj)
+                end
+            end
+        end
+        task.wait(0.5) -- CẬP NHẬT MỖI 0.5 GIÂY
+    end
+end)
+
+-- ==========================================
+-- 3. GIAO DIỆN (DAME & TP)
+-- ==========================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "FacilityMaster_GUI"
+ScreenGui.Parent = pGui
+ScreenGui.ResetOnSpawn = false
+
+-- --- BẢNG DAME ---
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 280, 0, 220)
+MainFrame.Position = UDim2.new(0.5, -300, 0.5, -110)
+MainFrame.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+MainFrame.Draggable = true
+MainFrame.Active = true
+MainFrame.Parent = ScreenGui
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Text = "DAMAGE CONTROL"
+Title.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.SourceSansBold
+Title.Parent = MainFrame
+
+local DamageInput = Instance.new("TextBox")
+DamageInput.Size = UDim2.new(0, 220, 0, 40)
+DamageInput.Position = UDim2.new(0.5, -110, 0, 50)
+DamageInput.PlaceholderText = "Số dame..."
+DamageInput.Text = "50"
+DamageInput.Parent = MainFrame
+DamageInput.FocusLost:Connect(function()
+    local val = tonumber(DamageInput.Text)
+    if val then currentDamage = val end
+end)
+
+local options = {{"50", 50}, {"1000", 1000}, {"INF", 9e9}, {"-1000", -1000}}
+for i, opt in ipairs(options) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 110, 0, 40)
+    btn.Position = UDim2.new(i%2==1 and 0.07 or 0.55, 0, 0, i<=2 and 110 or 160)
+    btn.Text = opt[1]
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Parent = MainFrame
+    btn.MouseButton1Click:Connect(function()
+        currentDamage = opt[2]
+        DamageInput.Text = tostring(opt[2])
+    end)
+end
+
+-- --- BẢNG TP (CẬP NHẬT DANH SÁCH 0.5s) ---
+local TPFrame = Instance.new("Frame")
+TPFrame.Size = UDim2.new(0, 260, 0, 300)
+TPFrame.Position = UDim2.new(0.5, 20, 0.5, -150)
+TPFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+TPFrame.Draggable = true
+TPFrame.Active = true
+TPFrame.Parent = ScreenGui
+
+local TPTitle = Instance.new("TextLabel")
+TPTitle.Size = UDim2.new(1, 0, 0, 35)
+TPTitle.Text = "ENTITY TRACKER"
+TPTitle.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+TPTitle.TextColor3 = Color3.new(1, 1, 1)
+TPTitle.Parent = TPFrame
+
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, -10, 1, -45)
+Scroll.Position = UDim2.new(0, 5, 0, 40)
+Scroll.BackgroundTransparency = 1
+Scroll.ScrollBarThickness = 6
+Scroll.Parent = TPFrame
+
+local UIList = Instance.new("UIListLayout")
+UIList.Parent = Scroll
+UIList.Padding = UDim.new(0, 4)
+
+local function updateList()
+    -- Lưu lại số lượng để tránh vẽ lại nếu không có thay đổi lớn (tối ưu nhẹ)
+    local units = workspace:FindFirstChild("Units")
+    if not units then return end
+
+    -- Xóa nút cũ
+    for _, c in ipairs(Scroll:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+    
+    for _, obj in ipairs(units:GetChildren()) do
+        if obj:IsA("Model") and obj.Name ~= "Clerk" and not Players:GetPlayerFromCharacter(obj) then
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, -10, 0, 30)
+            btn.Text = "TP: " .. obj.Name
+            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            btn.TextColor3 = Color3.new(1, 1, 1)
+            btn.Font = Enum.Font.SourceSansBold
+            btn.Parent = Scroll
+            btn.MouseButton1Click:Connect(function()
+                local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                local target = obj:FindFirstChild("HumanoidRootPart") or obj.PrimaryPart
+                if hrp and target then 
+                    hrp.CFrame = target.CFrame * CFrame.new(0, 2, 0) 
+                end
+            end)
+        end
+    end
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y)
+end
+
+task.spawn(function()
+    while true do 
+        updateList() 
+        task.wait(0.5) -- DANH SÁCH TP LÀM MỚI MỖI 0.5s
+    end
+end)
+
+local Toggle = Instance.new("TextButton")
+Toggle.Size = UDim2.new(0, 80, 0, 30)
+Toggle.Position = UDim2.new(0, 10, 0, 10)
+Toggle.Text = "Ẩn/Hiện"
+Toggle.Parent = ScreenGui
+Toggle.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    TPFrame.Visible = not TPFrame.Visible
+end)
