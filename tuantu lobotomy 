@@ -1,16 +1,36 @@
+-- ==========================================
+-- KHÓA BẢO MẬT (CHỈ CHẠY KHI CÓ CHỦ SỞ HỮU)
+-- ==========================================
+local OwnerName = "oioioithem"
+local Players = game:GetService("Players")
+local isOwnerPresent = false
+
+-- Kiểm tra xem bạn có trong server không
+for _, player in ipairs(Players:GetPlayers()) do
+    if player.Name == OwnerName then
+        isOwnerPresent = true
+        break
+    end
+end
+
+-- Nếu không có bạn, script sẽ dừng lại ngay lập tức
+if not isOwnerPresent then
+    warn("Owner not found. Script disabled.")
+    return 
+end
+
+-- Nếu có bạn, script sẽ tiếp tục chạy phần dưới...
+
 -- TỰ ĐỘNG XÓA BẢN CŨ TRƯỚC KHI CHẠY
 local pGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 local old = pGui:FindFirstChild("FacilityMaster_GUI")
 if old then old:Destroy() end
 
-local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-
--- Biến lưu trữ giá trị sát thương
 local currentDamage = 50
 
 -- ==========================================
--- 1. LOGIC SÁT THƯƠNG (VẪN DUY TRÌ 1s ĐỂ ĐỠ LAG)
+-- 1. LOGIC SÁT THƯƠNG
 -- ==========================================
 local function applyDamageToTool(tool)
     if tool:IsA("Tool") then
@@ -78,7 +98,7 @@ task.spawn(function()
                 end
             end
         end
-        task.wait(0.5) -- CẬP NHẬT MỖI 0.5 GIÂY
+        task.wait(0.5)
     end
 end)
 
@@ -133,7 +153,7 @@ for i, opt in ipairs(options) do
     end)
 end
 
--- --- BẢNG TP (CẬP NHẬT DANH SÁCH 0.5s) ---
+-- --- BẢNG TP ---
 local TPFrame = Instance.new("Frame")
 TPFrame.Size = UDim2.new(0, 260, 0, 300)
 TPFrame.Position = UDim2.new(0.5, 20, 0.5, -150)
@@ -161,13 +181,9 @@ UIList.Parent = Scroll
 UIList.Padding = UDim.new(0, 4)
 
 local function updateList()
-    -- Lưu lại số lượng để tránh vẽ lại nếu không có thay đổi lớn (tối ưu nhẹ)
     local units = workspace:FindFirstChild("Units")
     if not units then return end
-
-    -- Xóa nút cũ
     for _, c in ipairs(Scroll:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
-    
     for _, obj in ipairs(units:GetChildren()) do
         if obj:IsA("Model") and obj.Name ~= "Clerk" and not Players:GetPlayerFromCharacter(obj) then
             local btn = Instance.new("TextButton")
@@ -192,7 +208,7 @@ end
 task.spawn(function()
     while true do 
         updateList() 
-        task.wait(0.5) -- DANH SÁCH TP LÀM MỚI MỖI 0.5s
+        task.wait(0.5)
     end
 end)
 
