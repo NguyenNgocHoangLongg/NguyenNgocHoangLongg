@@ -1,150 +1,54 @@
 -- ==========================================
--- HỆ THỐNG BẢO MẬT USER ID & AUTO-TERMINATE
+-- KHÓA BẢO MẬT USER ID
 -- ==========================================
 local OWNER_ID = 7347339967
 local Players = game:GetService("Players")
 
--- Hàm kiểm tra chủ sở hữu có trong server không
-local function checkOwner()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player.UserId == OWNER_ID then
-            return true
-        end
+local function findOwner()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.UserId == OWNER_ID then return true end
     end
     return false
 end
 
--- Nếu lúc chạy script không có chủ sở hữu, dừng ngay
-if not checkOwner() then
-    warn("Owner không có mặt. Script không khởi động.")
+if not findOwner() then
+    warn("Owner not found. Script disabled.")
     return 
 end
 
--- Tên của ScreenGui để quản lý xóa/hủy
-local GUI_NAME = "FacilityMaster_Secure_GUI"
-
--- Xóa bản cũ nếu có
+-- DỌN DẸP BẢN CŨ
 local pGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-local old = pGui:FindFirstChild(GUI_NAME)
-if old then old:Destroy() end
+if pGui:FindFirstChild("FacilityMaster_GUI") then pGui.FacilityMaster_GUI:Destroy() end
 
 local LocalPlayer = Players.LocalPlayer
 local currentDamage = 50
-local scriptRunning = true -- Biến kiểm soát trạng thái chạy của script
+local scriptActive = true
 
--- ==========================================
--- CƠ CHẾ TỰ ĐỘNG TẮT KHI CHỦ SỞ HỮU RỜI SERVER
--- ==========================================
-task.spawn(function()
-    while scriptRunning do
-        if not checkOwner() then
-            scriptRunning = false -- Dừng các vòng lặp khác
-            local gui = pGui:FindFirstChild(GUI_NAME)
-            if gui then gui:Destroy() end -- Xóa sạch giao diện
-            
-            -- Xóa ESP đã tạo
-            local units = workspace:FindFirstChild("Units")
-            if units then
-                for _, obj in ipairs(units:GetChildren()) do
-                    if obj:FindFirstChild("ESP_Highlight") then obj.ESP_Highlight:Destroy() end
-                    if obj:FindFirstChild("ESP_Tag") then obj.ESP_Tag:Destroy() end
-                end
-            end
-            warn("Chủ sở hữu đã rời server. Script đã tự động hủy.")
-            break
-        end
-        task.wait(2) -- Kiểm tra mỗi 2 giây để đảm bảo an toàn
+-- TỰ TẮT KHI CHỦ SỞ HỮU RỜI SERVER
+Players.PlayerRemoving:Connect(function(player)
+    if player.UserId == OWNER_ID then
+        scriptActive = false
+        if pGui:FindFirstChild("FacilityMaster_GUI") then pGui.FacilityMaster_GUI:Destroy() end
     end
 end)
 
 -- ==========================================
--- 1. LOGIC SÁT THƯƠNG
--- ==========================================
-local function applyDamageToTool(tool)
-    if not scriptRunning then return end
-    if tool:IsA("Tool") then
-        local settings = tool:FindFirstChild("SettingValues")
-        if settings then
-            local maxVal = settings:FindFirstChild("MaxDamageValue")
-            local minVal = settings:FindFirstChild("MinDamageValue")
-            pcall(function()
-                if maxVal then maxVal.Value = currentDamage end
-                if minVal then minVal.Value = currentDamage end
-            end)
-        end
-    end
-end
-
-task.spawn(function()
-    while scriptRunning do
-        if LocalPlayer.Character then
-            for _, t in ipairs(LocalPlayer.Character:GetChildren()) do applyDamageToTool(t) end
-        end
-        for _, t in ipairs(LocalPlayer.Backpack:GetChildren()) do applyDamageToTool(t) end
-        task.wait(1)
-    end
-end)
-
--- ==========================================
--- 2. HỆ THỐNG ESP (0.5s)
--- ==========================================
-local function createESP(instance)
-    if not scriptRunning then return end
-    if not instance:FindFirstChild("ESP_Highlight") then
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "ESP_Highlight"
-        highlight.FillColor = Color3.fromRGB(255, 0, 0)
-        highlight.FillTransparency = 0.5
-        highlight.Parent = instance
-
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "ESP_Tag"
-        billboard.Size = UDim2.new(0, 100, 0, 50)
-        billboard.Adornee = instance.PrimaryPart or instance:FindFirstChildWhichIsA("BasePart")
-        billboard.AlwaysOnTop = true
-        billboard.ExtentsOffset = Vector3.new(0, 3, 0)
-        billboard.Parent = instance
-
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 1
-        label.Text = instance.Name
-        label.TextColor3 = Color3.new(1, 1, 1)
-        label.Font = Enum.Font.SourceSansBold
-        label.TextSize = 14
-        label.Parent = billboard
-    end
-end
-
-task.spawn(function()
-    while scriptRunning do
-        local units = workspace:FindFirstChild("Units")
-        if units then
-            for _, obj in ipairs(units:GetChildren()) do
-                if obj:IsA("Model") and obj.Name ~= "Clerk" and not Players:GetPlayerFromCharacter(obj) then
-                    createESP(obj)
-                end
-            end
-        end
-        task.wait(0.5)
-    end
-end)
-
--- ==========================================
--- 3. GIAO DIỆN (DAME & TP)
+-- GIAO DIỆN CHÍNH
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = GUI_NAME
+ScreenGui.Name = "FacilityMaster_GUI"
 ScreenGui.Parent = pGui
 ScreenGui.ResetOnSpawn = false
 
--- Khung Dame
+-- --- BẢNG DAME (CÓ THỂ DI CHUYỂN) ---
 local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 280, 0, 220)
 MainFrame.Position = UDim2.new(0.5, -300, 0.5, -110)
 MainFrame.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
-MainFrame.Draggable = true
+MainFrame.BorderSizePixel = 2
 MainFrame.Active = true
+MainFrame.Draggable = true -- Bật kéo thả
 MainFrame.Parent = ScreenGui
 
 local Title = Instance.new("TextLabel")
@@ -158,36 +62,45 @@ Title.Parent = MainFrame
 local DamageInput = Instance.new("TextBox")
 DamageInput.Size = UDim2.new(0, 220, 0, 40)
 DamageInput.Position = UDim2.new(0.5, -110, 0, 50)
-DamageInput.PlaceholderText = "Số dame..."
 DamageInput.Text = "50"
+DamageInput.PlaceholderText = "Nhập số..."
 DamageInput.Parent = MainFrame
 DamageInput.FocusLost:Connect(function()
-    local val = tonumber(DamageInput.Text)
-    if val then currentDamage = val end
+    currentDamage = tonumber(DamageInput.Text) or currentDamage
 end)
 
-local options = {{"50", 50}, {"1000", 1000}, {"INF", 9e9}, {"-1000", -1000}}
-for i, opt in ipairs(options) do
+local options = {
+    {Text = "50", Val = 50, Pos = UDim2.new(0.07, 0, 0, 110)},
+    {Text = "1000", Val = 1000, Pos = UDim2.new(0.55, 0, 0, 110)},
+    {Text = "INF", Val = math.huge, Pos = UDim2.new(0.07, 0, 0, 160)},
+    {Text = "-1000", Val = -1000, Pos = UDim2.new(0.55, 0, 0, 160)}
+}
+
+for _, opt in ipairs(options) do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0, 110, 0, 40)
-    btn.Position = UDim2.new(i%2==1 and 0.07 or 0.55, 0, 0, i<=2 and 110 or 160)
-    btn.Text = opt[1]
+    btn.Position = opt.Pos
+    btn.Text = opt.Text
     btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.BorderSizePixel = 1
     btn.Parent = MainFrame
     btn.MouseButton1Click:Connect(function()
-        currentDamage = opt[2]
-        DamageInput.Text = tostring(opt[2])
+        currentDamage = opt.Val
+        DamageInput.Text = tostring(opt.Val)
     end)
 end
 
--- Khung TP
+-- --- BẢNG TP (CÓ THỂ DI CHUYỂN) ---
 local TPFrame = Instance.new("Frame")
+TPFrame.Name = "TPFrame"
 TPFrame.Size = UDim2.new(0, 260, 0, 300)
 TPFrame.Position = UDim2.new(0.5, 20, 0.5, -150)
 TPFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-TPFrame.Draggable = true
+TPFrame.BorderSizePixel = 2
 TPFrame.Active = true
+TPFrame.Draggable = true -- Bật kéo thả
 TPFrame.Parent = ScreenGui
 
 local TPTitle = Instance.new("TextLabel")
@@ -195,12 +108,14 @@ TPTitle.Size = UDim2.new(1, 0, 0, 35)
 TPTitle.Text = "ENTITY TRACKER"
 TPTitle.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 TPTitle.TextColor3 = Color3.new(1, 1, 1)
+TPTitle.Font = Enum.Font.SourceSansBold
 TPTitle.Parent = TPFrame
 
 local Scroll = Instance.new("ScrollingFrame")
 Scroll.Size = UDim2.new(1, -10, 1, -45)
 Scroll.Position = UDim2.new(0, 5, 0, 40)
 Scroll.BackgroundTransparency = 1
+Scroll.BorderSizePixel = 0
 Scroll.ScrollBarThickness = 6
 Scroll.Parent = TPFrame
 
@@ -208,28 +123,81 @@ local UIList = Instance.new("UIListLayout")
 UIList.Parent = Scroll
 UIList.Padding = UDim.new(0, 4)
 
-local function updateList()
-    if not scriptRunning then return end
-    local units = workspace:FindFirstChild("Units")
-    if not units then return end
-    for _, c in ipairs(Scroll:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
-    for _, obj in ipairs(units:GetChildren()) do
-        if obj:IsA("Model") and obj.Name ~= "Clerk" and not Players:GetPlayerFromCharacter(obj) then
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, -10, 0, 30)
-            btn.Text = "TP: " .. obj.Name
-            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            btn.TextColor3 = Color3.new(1, 1, 1)
-            btn.Font = Enum.Font.SourceSansBold
-            btn.Parent = Scroll
-            btn.MouseButton1Click:Connect(function()
-                local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                local target = obj:FindFirstChild("HumanoidRootPart") or obj.PrimaryPart
-                if hrp and target then hrp.CFrame = target.CFrame * CFrame.new(0, 2, 0) end
-            end)
-        end
-    end
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y)
-end
+-- --- NÚT ẨN/HIỆN ---
+local Toggle = Instance.new("TextButton")
+Toggle.Size = UDim2.new(0, 80, 0, 30)
+Toggle.Position = UDim2.new(0, 10, 0, 10)
+Toggle.Text = "Ẩn/Hiện"
+Toggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Toggle.TextColor3 = Color3.new(1, 1, 1)
+Toggle.Parent = ScreenGui
+Toggle.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    TPFrame.Visible = not TPFrame.Visible
+end)
 
+-- ==========================================
+-- VÒNG LẶP LOGIC (DAME, ESP, TP LIST)
+-- ==========================================
 task.spawn(function()
+    while scriptActive do
+        -- 1. Cập nhật Dame
+        local char = LocalPlayer.Character
+        if char then
+            for _, t in ipairs(char:GetChildren()) do
+                if t:IsA("Tool") and t:FindFirstChild("SettingValues") then
+                    pcall(function()
+                        t.SettingValues.MaxDamageValue.Value = currentDamage
+                        t.SettingValues.MinDamageValue.Value = currentDamage
+                    end)
+                end
+            end
+        end
+        
+        -- 2. Cập nhật ESP & TP List
+        local units = workspace:FindFirstChild("Units")
+        if units then
+            -- Xóa nút cũ trong danh sách TP
+            for _, c in ipairs(Scroll:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+            
+            for _, obj in ipairs(units:GetChildren()) do
+                if obj:IsA("Model") and obj.Name ~= "Clerk" and not Players:GetPlayerFromCharacter(obj) then
+                    -- Tạo ESP nếu chưa có
+                    if not obj:FindFirstChild("ESP_Highlight") then
+                        local hl = Instance.new("Highlight", obj)
+                        hl.Name = "ESP_Highlight"
+                        hl.FillColor = Color3.fromRGB(255, 0, 0)
+                        
+                        local bg = Instance.new("BillboardGui", obj)
+                        bg.Name = "ESP_Tag"
+                        bg.Size = UDim2.new(0, 100, 0, 30)
+                        bg.AlwaysOnTop = true
+                        bg.ExtentsOffset = Vector3.new(0, 3, 0)
+                        local txt = Instance.new("TextLabel", bg)
+                        txt.Size = UDim2.new(1, 0, 1, 0)
+                        txt.BackgroundTransparency = 1
+                        txt.Text = obj.Name
+                        txt.TextColor3 = Color3.new(1, 1, 1)
+                        txt.Font = Enum.Font.SourceSansBold
+                        txt.TextSize = 14
+                    end
+                    
+                    -- Thêm nút vào bảng TP
+                    local btn = Instance.new("TextButton", Scroll)
+                    btn.Size = UDim2.new(1, -10, 0, 30)
+                    btn.Text = "TP: " .. obj.Name
+                    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                    btn.TextColor3 = Color3.new(1, 1, 1)
+                    btn.Font = Enum.Font.SourceSansBold
+                    btn.MouseButton1Click:Connect(function()
+                        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                        local target = obj:FindFirstChild("HumanoidRootPart") or obj.PrimaryPart
+                        if hrp and target then hrp.CFrame = target.CFrame * CFrame.new(0, 2, 0) end
+                    end)
+                end
+            end
+        end
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y)
+        task.wait(0.5)
+    end
+end)
