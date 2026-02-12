@@ -1,38 +1,67 @@
 -- ==========================================
--- KHÓA BẢO MẬT (CHỈ CHẠY KHI CÓ CHỦ SỞ HỮU)
+-- HỆ THỐNG BẢO MẬT USER ID & AUTO-TERMINATE
 -- ==========================================
-local OwnerName = "oioioithem"
+local OWNER_ID = 7347339967
 local Players = game:GetService("Players")
-local isOwnerPresent = false
 
--- Kiểm tra xem bạn có trong server không
-for _, player in ipairs(Players:GetPlayers()) do
-    if player.Name == OwnerName then
-        isOwnerPresent = true
-        break
+-- Hàm kiểm tra chủ sở hữu có trong server không
+local function checkOwner()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.UserId == OWNER_ID then
+            return true
+        end
     end
+    return false
 end
 
--- Nếu không có bạn, script sẽ dừng lại ngay lập tức
-if not isOwnerPresent then
-    warn("Owner not found. Script disabled.")
+-- Nếu lúc chạy script không có chủ sở hữu, dừng ngay
+if not checkOwner() then
+    warn("Owner không có mặt. Script không khởi động.")
     return 
 end
 
--- Nếu có bạn, script sẽ tiếp tục chạy phần dưới...
+-- Tên của ScreenGui để quản lý xóa/hủy
+local GUI_NAME = "FacilityMaster_Secure_GUI"
 
--- TỰ ĐỘNG XÓA BẢN CŨ TRƯỚC KHI CHẠY
+-- Xóa bản cũ nếu có
 local pGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-local old = pGui:FindFirstChild("FacilityMaster_GUI")
+local old = pGui:FindFirstChild(GUI_NAME)
 if old then old:Destroy() end
 
 local LocalPlayer = Players.LocalPlayer
 local currentDamage = 50
+local scriptRunning = true -- Biến kiểm soát trạng thái chạy của script
+
+-- ==========================================
+-- CƠ CHẾ TỰ ĐỘNG TẮT KHI CHỦ SỞ HỮU RỜI SERVER
+-- ==========================================
+task.spawn(function()
+    while scriptRunning do
+        if not checkOwner() then
+            scriptRunning = false -- Dừng các vòng lặp khác
+            local gui = pGui:FindFirstChild(GUI_NAME)
+            if gui then gui:Destroy() end -- Xóa sạch giao diện
+            
+            -- Xóa ESP đã tạo
+            local units = workspace:FindFirstChild("Units")
+            if units then
+                for _, obj in ipairs(units:GetChildren()) do
+                    if obj:FindFirstChild("ESP_Highlight") then obj.ESP_Highlight:Destroy() end
+                    if obj:FindFirstChild("ESP_Tag") then obj.ESP_Tag:Destroy() end
+                end
+            end
+            warn("Chủ sở hữu đã rời server. Script đã tự động hủy.")
+            break
+        end
+        task.wait(2) -- Kiểm tra mỗi 2 giây để đảm bảo an toàn
+    end
+end)
 
 -- ==========================================
 -- 1. LOGIC SÁT THƯƠNG
 -- ==========================================
 local function applyDamageToTool(tool)
+    if not scriptRunning then return end
     if tool:IsA("Tool") then
         local settings = tool:FindFirstChild("SettingValues")
         if settings then
@@ -47,7 +76,7 @@ local function applyDamageToTool(tool)
 end
 
 task.spawn(function()
-    while true do
+    while scriptRunning do
         if LocalPlayer.Character then
             for _, t in ipairs(LocalPlayer.Character:GetChildren()) do applyDamageToTool(t) end
         end
@@ -57,15 +86,15 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- 2. HỆ THỐNG ESP (CẬP NHẬT 0.5s)
+-- 2. HỆ THỐNG ESP (0.5s)
 -- ==========================================
 local function createESP(instance)
+    if not scriptRunning then return end
     if not instance:FindFirstChild("ESP_Highlight") then
         local highlight = Instance.new("Highlight")
         highlight.Name = "ESP_Highlight"
         highlight.FillColor = Color3.fromRGB(255, 0, 0)
         highlight.FillTransparency = 0.5
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
         highlight.Parent = instance
 
         local billboard = Instance.new("BillboardGui")
@@ -81,7 +110,6 @@ local function createESP(instance)
         label.BackgroundTransparency = 1
         label.Text = instance.Name
         label.TextColor3 = Color3.new(1, 1, 1)
-        label.TextStrokeTransparency = 0
         label.Font = Enum.Font.SourceSansBold
         label.TextSize = 14
         label.Parent = billboard
@@ -89,7 +117,7 @@ local function createESP(instance)
 end
 
 task.spawn(function()
-    while true do
+    while scriptRunning do
         local units = workspace:FindFirstChild("Units")
         if units then
             for _, obj in ipairs(units:GetChildren()) do
@@ -106,11 +134,11 @@ end)
 -- 3. GIAO DIỆN (DAME & TP)
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "FacilityMaster_GUI"
+ScreenGui.Name = GUI_NAME
 ScreenGui.Parent = pGui
 ScreenGui.ResetOnSpawn = false
 
--- --- BẢNG DAME ---
+-- Khung Dame
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 280, 0, 220)
 MainFrame.Position = UDim2.new(0.5, -300, 0.5, -110)
@@ -153,7 +181,7 @@ for i, opt in ipairs(options) do
     end)
 end
 
--- --- BẢNG TP ---
+-- Khung TP
 local TPFrame = Instance.new("Frame")
 TPFrame.Size = UDim2.new(0, 260, 0, 300)
 TPFrame.Position = UDim2.new(0.5, 20, 0.5, -150)
@@ -181,6 +209,7 @@ UIList.Parent = Scroll
 UIList.Padding = UDim.new(0, 4)
 
 local function updateList()
+    if not scriptRunning then return end
     local units = workspace:FindFirstChild("Units")
     if not units then return end
     for _, c in ipairs(Scroll:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
@@ -196,9 +225,7 @@ local function updateList()
             btn.MouseButton1Click:Connect(function()
                 local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                 local target = obj:FindFirstChild("HumanoidRootPart") or obj.PrimaryPart
-                if hrp and target then 
-                    hrp.CFrame = target.CFrame * CFrame.new(0, 2, 0) 
-                end
+                if hrp and target then hrp.CFrame = target.CFrame * CFrame.new(0, 2, 0) end
             end)
         end
     end
@@ -206,18 +233,3 @@ local function updateList()
 end
 
 task.spawn(function()
-    while true do 
-        updateList() 
-        task.wait(0.5)
-    end
-end)
-
-local Toggle = Instance.new("TextButton")
-Toggle.Size = UDim2.new(0, 80, 0, 30)
-Toggle.Position = UDim2.new(0, 10, 0, 10)
-Toggle.Text = "Ẩn/Hiện"
-Toggle.Parent = ScreenGui
-Toggle.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-    TPFrame.Visible = not TPFrame.Visible
-end)
